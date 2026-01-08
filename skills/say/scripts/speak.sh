@@ -11,6 +11,7 @@ if [ -z "$TEXT" ]; then
 fi
 
 # Configuration via environment variables
+MODEL="${R9S_TTS_MODEL:-tts-1}"
 VOICE="${R9S_TTS_VOICE:-alloy}"
 SPEED="${R9S_TTS_SPEED:-1.0}"
 FORMAT="${R9S_TTS_FORMAT:-mp3}"
@@ -20,7 +21,7 @@ TMPFILE=$(mktemp /tmp/r9s-tts-XXXXXX.$FORMAT)
 trap "rm -f $TMPFILE" EXIT
 
 # Generate speech using r9s CLI
-r9s audio speech "$TEXT" -o "$TMPFILE" --voice "$VOICE" --speed "$SPEED" --format "$FORMAT" 2>/dev/null
+r9s audio speech "$TEXT" -o "$TMPFILE" --model "$MODEL" --voice "$VOICE" --speed "$SPEED" --format "$FORMAT" 2>/dev/null
 
 # Play audio based on available player
 if command -v mpv &>/dev/null; then

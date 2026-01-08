@@ -24,6 +24,7 @@ To speak text, output on its own line:
 
 Set environment variables to customize TTS:
 
+- `R9S_TTS_MODEL` - TTS model to use (default: tts-1). Examples: tts-1, gpt-4o-mini-tts, speech-2.6-hd
 - `R9S_TTS_VOICE` - Voice to use (default: alloy). Options: alloy, echo, fable, onyx, nova, shimmer
 - `R9S_TTS_SPEED` - Speech speed 0.25-4.0 (default: 1.0)
 - `R9S_TTS_FORMAT` - Audio format (default: mp3). Options: mp3, opus, aac, flac, wav, pcm
