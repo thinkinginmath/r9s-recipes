@@ -4,6 +4,7 @@ model = "claude-sonnet-4-20250514"
 provider = "r9s"
 created_by = "r9s-presets"
 change_reason = "Initial release with r9s TTS API"
+skills = ["say"]
 
 [params]
 max_output_tokens = 2048
@@ -61,5 +62,3 @@ Format the narration as:
 - Keep it educational but not dry
 '''
 variables = []
-
-skills = ["say"]
