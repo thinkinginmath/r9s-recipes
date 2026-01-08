@@ -1,0 +1,5 @@
+[agent]
+id = "agt_presentation_designer"
+name = "presentation-designer"
+description = "Create compelling presentations with clear narrative structure"
+current_version = "1.0.0"

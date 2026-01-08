@@ -1,0 +1,5 @@
+[agent]
+id = "agt_contract_analyst"
+name = "contract-analyst"
+description = "Analyze contracts for risks, obligations, and key terms"
+current_version = "1.0.0"

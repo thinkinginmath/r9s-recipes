@@ -1,0 +1,5 @@
+[agent]
+id = "agt_api_designer"
+name = "api-designer"
+description = "Design RESTful and GraphQL APIs following best practices"
+current_version = "1.0.0"

@@ -1,0 +1,5 @@
+[agent]
+id = "agt_devops_assistant"
+name = "devops-assistant"
+description = "Infrastructure, CI/CD, and deployment expert"
+current_version = "1.0.0"

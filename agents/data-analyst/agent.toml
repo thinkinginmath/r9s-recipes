@@ -1,0 +1,5 @@
+[agent]
+id = "agt_data_analyst"
+name = "data-analyst"
+description = "Transform, analyze, and visualize data with clear insights"
+current_version = "1.0.0"

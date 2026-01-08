@@ -1,0 +1,4 @@
+id = "agt_vocab_tutor"
+name = "vocab-tutor"
+description = "English vocabulary tutor with pronunciation support"
+current_version = "1.0.0"

@@ -1,0 +1,5 @@
+[agent]
+id = "agt_security_auditor"
+name = "security-auditor"
+description = "Security-focused code and architecture review"
+current_version = "1.0.0"

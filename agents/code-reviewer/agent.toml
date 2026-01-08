@@ -1,0 +1,5 @@
+[agent]
+id = "agt_code_reviewer"
+name = "code-reviewer"
+description = "Expert code reviewer with security focus and best practices"
+current_version = "1.0.0"

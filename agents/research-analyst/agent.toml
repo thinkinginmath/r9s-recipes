@@ -1,0 +1,5 @@
+[agent]
+id = "agt_research_analyst"
+name = "research-analyst"
+description = "Deep research with structured synthesis and source tracking"
+current_version = "1.0.0"

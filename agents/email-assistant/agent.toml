@@ -1,0 +1,5 @@
+[agent]
+id = "agt_email_assistant"
+name = "email-assistant"
+description = "Draft professional emails with appropriate tone"
+current_version = "1.0.0"
