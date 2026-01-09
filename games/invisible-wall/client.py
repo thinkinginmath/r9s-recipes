@@ -268,9 +268,11 @@ class InvisibleWallGame:
             if msg.retracted:
                 content = f"{DIM}[消息已撤回]{RESET}"
 
-            # Simple right alignment
-            prefix = " " * max(0, width - len(content) - 15)
-            lines.append(f"{prefix}{FG_GREEN}{content}{RESET}  {DIM}{timestamp}{RESET}")
+            # Right alignment accounting for CJK width
+            content_width = self._display_width(content)
+            suffix = f"  {timestamp}"  # 2 spaces + 5 char timestamp
+            prefix_len = max(0, width - content_width - 7)
+            lines.append(f"{' ' * prefix_len}{FG_GREEN}{content}{RESET}{DIM}{suffix}{RESET}")
         else:
             # Assistant messages: left-aligned
             content = msg.content
@@ -335,6 +337,10 @@ class InvisibleWallGame:
         self.online_status = "typing"
         self._render_status_bar_only()
 
+        # Use consultant panel for typing indicator
+        width, height = self._get_terminal_size()
+        panel_row = height - 3
+
         # Animate typing indicator
         dots = ["", ".", "..", "..."]
         start = time.time()
@@ -342,20 +348,18 @@ class InvisibleWallGame:
         i = 0
 
         while elapsed < duration_ms / 1000:
-            width, height = self._get_terminal_size()
-            self._move_cursor(height - 3, 1)
-            indicator = f"  {FG_CYAN}{self.character.name} 正在输入{dots[i % 4]}{RESET}"
+            self._move_cursor(panel_row, 1)
+            indicator = f"  {FG_CYAN}💭 {self.character.name} 正在输入{dots[i % 4]}{RESET}"
             print(f"\033[K{indicator}", end="", flush=True)
 
             time.sleep(0.3)
             elapsed = time.time() - start
             i += 1
 
-        # Clear typing indicator
-        self._move_cursor(height - 3, 1)
-        print("\033[K", end="", flush=True)
+        # Restore consultant panel
         self.online_status = "online"
         self._render_status_bar_only()
+        self._render_consultant_panel()
 
     def _render_status_bar_only(self) -> None:
         """Render just the status bar without clearing screen."""
@@ -644,7 +648,10 @@ class InvisibleWallGame:
                 return clean_content
 
         except Exception as e:
-            # On error, show a generic response
+            # Show error in consultant panel for debugging
+            self.last_consultant_message = f"(角色API错误: {type(e).__name__}: {e})"
+            self._render_consultant_panel()
+            # Show generic response in chat
             error_msg = Message(role="assistant", content="……")
             self.messages.append(error_msg)
             self._render_chat_area()
