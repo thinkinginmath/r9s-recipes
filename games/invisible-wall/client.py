@@ -498,10 +498,14 @@ class InvisibleWallGame:
             )
             if response.choices and len(response.choices) > 0:
                 choice = response.choices[0]
-                if choice.message and choice.message.content:
-                    return choice.message.content
-                return "(顾问没有回应)"
-            return "(顾问返回空响应)"
+                if choice.message:
+                    content = getattr(choice.message, 'content', None)
+                    if content:
+                        return content
+                    # Debug: show what we got
+                    return f"(消息对象: {choice.message})"
+                return f"(choice无message: {choice})"
+            return f"(无choices: {response})"
         except Exception as e:
             return f"(错误: {type(e).__name__}: {e})"
 
