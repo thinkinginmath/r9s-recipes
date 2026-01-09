@@ -84,11 +84,13 @@ class InvisibleWallGame:
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        model: str = "gpt-4o",
+        model: str = "gpt-5-mini",
+        consultant_model: str = "glm-4.7",
         character: Optional[Character] = None,
     ):
         self.client = R9S(api_key=api_key, server_url=base_url)
         self.model = model
+        self.consultant_model = consultant_model
         self.character = character or Character()
         self.state = EmotionalState()
         self.messages: List[Message] = []
@@ -98,9 +100,11 @@ class InvisibleWallGame:
         self.last_retraction: Optional[RetractionEvent] = None
         self.online_status: str = "online"
         self.last_active: datetime = datetime.now()
+        self.last_consultant_message: str = ""  # Last consultant advice
 
-        # Load system prompt
+        # Load system prompts
         self.system_prompt = self._build_system_prompt()
+        self.consultant_prompt = self._build_consultant_prompt()
 
     def _build_system_prompt(self) -> str:
         """Build the system prompt with character variables."""
@@ -145,6 +149,48 @@ class InvisibleWallGame:
 
 """
         return prompt
+
+    def _build_consultant_prompt(self) -> str:
+        """Build the consultant AI system prompt."""
+        return f"""# 角色：恋爱顾问
+
+你是一个帮助玩家分析聊天对话的顾问。玩家正在和 **{self.character.name}** 聊天，一个 {self.character.university} {self.character.major} 的 {self.character.year} 学生。
+
+## 你的任务
+
+1. 分析对方的消息，解读潜台词和情绪
+2. 给出实用的回复建议
+3. 指出玩家可能犯的错误
+4. 注意对方的微妙信号
+
+## 回复风格
+
+- 简短有力，1-3句话
+- 像朋友给建议，不要太正式
+- 可以用"她可能..."、"试试..."、"小心..."这样的句式
+- 偶尔可以调侃玩家
+
+## 重要
+
+- 你不是在和{self.character.name}对话，你是在帮玩家分析
+- 你能看到对话历史，但不知道对方的真实想法
+- 你的分析可能是错的，保持谦虚
+- 不要写太长，这是聊天不是论文
+
+## 示例输出
+
+分析请求：
+> 她说"哦……那你可以找其他人呀"是什么意思？
+
+回复：
+> 有点酸。她没说不想去，只是在看你会不会坚持。别放弃，但也别太黏。
+
+建议请求：
+> 她说她周末忙，我该怎么回？
+
+回复：
+> 别追问忙什么，显得不信任。试试："那下周呢？"——给她退路，但保持邀请。
+"""
 
     def _clear_screen(self) -> None:
         """Clear terminal screen."""
@@ -225,8 +271,8 @@ class InvisibleWallGame:
         """Render the chat message area."""
         width, height = self._get_terminal_size()
 
-        # Reserve lines for status bar (1), input area (3)
-        chat_height = height - 4
+        # Reserve lines for status bar (1), consultant panel (2), input area (2)
+        chat_height = height - 6
 
         # Collect all message lines
         all_lines: List[str] = []
@@ -245,6 +291,25 @@ class InvisibleWallGame:
         # Clear remaining lines
         for _ in range(chat_height - len(visible_lines)):
             print("\033[K")
+
+    def _render_consultant_panel(self) -> None:
+        """Render the consultant advice panel."""
+        width, height = self._get_terminal_size()
+        panel_row = height - 4
+
+        self._move_cursor(panel_row, 1)
+        print(f"\033[K{DIM}{'─' * width}{RESET}")
+
+        self._move_cursor(panel_row + 1, 1)
+        if self.last_consultant_message:
+            # Wrap long messages
+            max_len = width - 8
+            msg = self.last_consultant_message.replace("\n", " ")
+            if len(msg) > max_len:
+                msg = msg[: max_len - 3] + "..."
+            print(f"\033[K  {FG_MAGENTA}💭 顾问:{RESET} {msg}")
+        else:
+            print(f"\033[K  {DIM}💭 /ask 分析对话  /hint 获取建议{RESET}")
 
     def _render_input_area(self) -> None:
         """Render the input area."""
@@ -396,6 +461,63 @@ class InvisibleWallGame:
 
         return "normal"
 
+    def _call_consultant(self, query: str) -> str:
+        """Call the consultant AI for advice."""
+        # Build context from recent conversation
+        recent_history = self.history[-10:]  # Last 10 messages
+
+        messages = [
+            {"role": "system", "content": self.consultant_prompt},
+            {
+                "role": "user",
+                "content": f"对话历史：\n{self._format_history_for_consultant(recent_history)}\n\n{query}",
+            },
+        ]
+
+        try:
+            response = self.client.chat.create(
+                model=self.consultant_model,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=150,
+            )
+            if response.choices and response.choices[0].message:
+                return response.choices[0].message.content or "..."
+        except Exception as e:
+            return f"(顾问暂时无法回应: {e})"
+        return "..."
+
+    def _format_history_for_consultant(self, history: List[Dict[str, str]]) -> str:
+        """Format conversation history for the consultant."""
+        lines = []
+        for msg in history:
+            role = "你" if msg["role"] == "user" else self.character.name
+            lines.append(f"{role}: {msg['content']}")
+        return "\n".join(lines) if lines else "(还没有对话)"
+
+    def ask_consultant(self, question: Optional[str] = None) -> str:
+        """Ask the consultant to analyze the conversation."""
+        if not self.history:
+            return "还没开始聊天呢，先说点什么吧。"
+
+        last_msg = self.history[-1] if self.history else None
+        if question:
+            query = question
+        elif last_msg and last_msg["role"] == "assistant":
+            query = f'她刚说了"{last_msg["content"]}"，这是什么意思？我该怎么回？'
+        else:
+            query = "帮我分析一下现在的对话情况，她是什么态度？"
+
+        return self._call_consultant(query)
+
+    def get_hint(self) -> str:
+        """Get a suggested response from the consultant."""
+        if not self.history:
+            return "先打个招呼吧，比如「在干嘛呢」"
+
+        query = "给我一个回复建议，直接告诉我该说什么，简短一点。"
+        return self._call_consultant(query)
+
     def send_message(self, user_input: str) -> Optional[str]:
         """Send a message and get response with full timing simulation."""
         if not user_input.strip():
@@ -532,21 +654,27 @@ class InvisibleWallGame:
         self.pending_text = ""
         self.pending_start = None
 
+    def _full_render(self) -> None:
+        """Render all UI components."""
+        print(self._render_status_bar())
+        self._render_chat_area()
+        self._render_consultant_panel()
+        self._render_input_area()
+
     def run(self) -> None:
         """Run the interactive TUI game loop."""
         self._clear_screen()
 
         # Initial render
-        print(self._render_status_bar())
-        self._render_chat_area()
-        self._render_input_area()
+        self._full_render()
 
         width, height = self._get_terminal_size()
 
-        print(f"\n{DIM}  输入消息开始聊天，Ctrl+C 退出{RESET}\n")
-
         try:
             while True:
+                # Update dimensions in case terminal was resized
+                width, height = self._get_terminal_size()
+
                 # Move to input position
                 self._move_cursor(height - 1, 1)
                 print(f"{FG_CYAN}>{RESET} ", end="", flush=True)
@@ -570,9 +698,31 @@ class InvisibleWallGame:
                 if user_input.lower() == "/clear":
                     self.messages.clear()
                     self.history.clear()
+                    self.last_consultant_message = ""
                     self._clear_screen()
-                    print(self._render_status_bar())
-                    self._render_chat_area()
+                    self._full_render()
+                    continue
+
+                if user_input.lower() == "/help":
+                    self.last_consultant_message = "命令: /ask [问题] 分析对话 | /hint 获取建议 | /clear 清空 | /quit 退出"
+                    self._render_consultant_panel()
+                    continue
+
+                if user_input.lower().startswith("/ask"):
+                    # Ask consultant for analysis
+                    question = user_input[4:].strip() if len(user_input) > 4 else None
+                    self.last_consultant_message = "正在分析..."
+                    self._render_consultant_panel()
+                    self.last_consultant_message = self.ask_consultant(question)
+                    self._render_consultant_panel()
+                    continue
+
+                if user_input.lower() == "/hint":
+                    # Get a hint from consultant
+                    self.last_consultant_message = "正在思考..."
+                    self._render_consultant_panel()
+                    self.last_consultant_message = self.get_hint()
+                    self._render_consultant_panel()
                     continue
 
                 # Track for potential retraction
@@ -586,6 +736,7 @@ class InvisibleWallGame:
                 self.send_message(user_input)
 
                 # Re-render
+                self._render_consultant_panel()
                 self._render_input_area()
 
         except KeyboardInterrupt:
@@ -604,7 +755,8 @@ def main():
     parser.add_argument("--university", default="浙江大学", help="学校")
     parser.add_argument("--major", default="中文系", help="专业")
     parser.add_argument("--year", default="大三", help="年级")
-    parser.add_argument("--model", default="gpt-4o-mini", help="Model to use")
+    parser.add_argument("--model", default="gpt-5-mini", help="Character model")
+    parser.add_argument("--consultant-model", default="glm-4.7", help="Consultant model")
     parser.add_argument("--api-key", help="API key (or set R9S_API_KEY)")
     parser.add_argument("--base-url", help="Base URL (or set R9S_BASE_URL)")
 
@@ -622,6 +774,7 @@ def main():
         api_key=args.api_key,
         base_url=args.base_url,
         model=args.model,
+        consultant_model=args.consultant_model,
         character=character,
     )
 
