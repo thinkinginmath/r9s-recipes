@@ -494,7 +494,6 @@ class InvisibleWallGame:
                 model=self.consultant_model,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=150,
             )
             if response.choices and len(response.choices) > 0:
                 choice = response.choices[0]
@@ -620,10 +619,6 @@ class InvisibleWallGame:
                 model=self.model,
                 messages=messages,
                 temperature=0.85,
-                max_tokens=256,
-                top_p=0.95,
-                presence_penalty=0.3,
-                frequency_penalty=0.5,
             )
 
             if response.choices and response.choices[0].message:
