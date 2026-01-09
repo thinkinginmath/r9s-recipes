@@ -87,7 +87,7 @@ class InvisibleWallGame:
         model: str = "gpt-4o",
         character: Optional[Character] = None,
     ):
-        self.client = R9S(bearer_auth=api_key, server_url=base_url)
+        self.client = R9S(api_key=api_key, server_url=base_url)
         self.model = model
         self.character = character or Character()
         self.state = EmotionalState()
