@@ -803,8 +803,9 @@ class InvisibleWallGame:
                 # Send and get response
                 self.send_message(user_input)
 
-                # Clear consultant message after new conversation turn
-                self.last_consultant_message = ""
+                # Clear consultant message after new conversation turn (unless there's an error)
+                if not self.last_consultant_message.startswith("("):
+                    self.last_consultant_message = ""
 
                 # Re-render
                 self._render_consultant_panel()
