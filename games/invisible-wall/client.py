@@ -490,11 +490,15 @@ class InvisibleWallGame:
         ]
 
         try:
-            response = self.client.chat.create(
-                model=self.consultant_model,
-                messages=messages,
-                temperature=0.7,
-            )
+            # Build API params - some models (gpt-5*) don't support temperature
+            api_params = {
+                "model": self.consultant_model,
+                "messages": messages,
+            }
+            if not self.consultant_model.startswith("gpt-5"):
+                api_params["temperature"] = 0.7
+
+            response = self.client.chat.create(**api_params)
             if response.choices and len(response.choices) > 0:
                 choice = response.choices[0]
                 if choice.message:
@@ -615,11 +619,15 @@ class InvisibleWallGame:
 
         # Call API
         try:
-            response = self.client.chat.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.85,
-            )
+            # Build API params - some models (gpt-5*) don't support temperature
+            api_params = {
+                "model": self.model,
+                "messages": messages,
+            }
+            if not self.model.startswith("gpt-5"):
+                api_params["temperature"] = 0.85
+
+            response = self.client.chat.create(**api_params)
 
             if response.choices and response.choices[0].message:
                 raw_content = response.choices[0].message.content or ""
