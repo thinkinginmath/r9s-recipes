@@ -284,8 +284,8 @@ class InvisibleWallGame:
         """Render the chat message area."""
         width, height = self._get_terminal_size()
 
-        # Reserve lines for status bar (1), consultant panel (2), input area (2)
-        chat_height = height - 6
+        # Reserve lines for status bar (1), consultant panel (3), input area (2)
+        chat_height = height - 7
 
         # Collect all message lines
         all_lines: List[str] = []
@@ -306,23 +306,56 @@ class InvisibleWallGame:
             print("\033[K")
 
     def _render_consultant_panel(self) -> None:
-        """Render the consultant advice panel."""
+        """Render the consultant advice panel (2 lines for longer messages)."""
         width, height = self._get_terminal_size()
-        panel_row = height - 4
+        panel_row = height - 5  # Move up one row to make room for 2 lines
 
         self._move_cursor(panel_row, 1)
         print(f"\033[K{DIM}{'─' * width}{RESET}")
 
-        self._move_cursor(panel_row + 1, 1)
         if self.last_consultant_message:
-            # Wrap long messages
-            max_len = width - 8
-            msg = self.last_consultant_message.replace("\n", " ")
-            if len(msg) > max_len:
-                msg = msg[: max_len - 3] + "..."
-            print(f"\033[K  {FG_MAGENTA}💭 顾问:{RESET} {msg}")
+            # Clean up message and split into lines
+            msg = self.last_consultant_message.replace("\n", " ").strip()
+            max_chars_per_line = width - 12  # Space for "💭 顾问: " prefix
+
+            # Split into up to 2 lines
+            lines = []
+            remaining = msg
+            for _ in range(2):
+                if not remaining:
+                    break
+                if self._display_width(remaining) <= max_chars_per_line:
+                    lines.append(remaining)
+                    remaining = ""
+                else:
+                    # Find break point
+                    line = ""
+                    for char in remaining:
+                        if self._display_width(line + char) > max_chars_per_line:
+                            break
+                        line += char
+                    lines.append(line)
+                    remaining = remaining[len(line):]
+
+            # Add ellipsis if more content remains
+            if remaining and lines:
+                lines[-1] = lines[-1][:-3] + "..." if len(lines[-1]) > 3 else "..."
+
+            # Render lines
+            self._move_cursor(panel_row + 1, 1)
+            if lines:
+                print(f"\033[K  {FG_MAGENTA}💭 顾问:{RESET} {lines[0]}")
+            if len(lines) > 1:
+                self._move_cursor(panel_row + 2, 1)
+                print(f"\033[K          {lines[1]}")  # Indent continuation
+            else:
+                self._move_cursor(panel_row + 2, 1)
+                print("\033[K")  # Clear second line
         else:
+            self._move_cursor(panel_row + 1, 1)
             print(f"\033[K  {DIM}💭 /ask 分析对话  /hint 获取建议{RESET}")
+            self._move_cursor(panel_row + 2, 1)
+            print("\033[K")
 
     def _render_input_area(self) -> None:
         """Render the input area."""
@@ -719,15 +752,18 @@ class InvisibleWallGame:
                 if not user_input.strip():
                     continue
 
-                if user_input.lower() in ("/quit", "/exit", "/q"):
+                # Normalize input for command matching
+                cmd = user_input.strip().lower()
+
+                if cmd in ("/quit", "/exit", "/q"):
                     break
 
-                if user_input.lower() == "/state":
+                if cmd == "/state":
                     # Debug: show state
                     print(f"\n{DIM}State: {self.state.to_dict()}{RESET}")
                     continue
 
-                if user_input.lower() == "/clear":
+                if cmd == "/clear":
                     self.messages.clear()
                     self.history.clear()
                     self.last_consultant_message = ""
@@ -735,12 +771,12 @@ class InvisibleWallGame:
                     self._full_render()
                     continue
 
-                if user_input.lower() == "/help":
+                if cmd == "/help":
                     self.last_consultant_message = "命令: /ask [问题] 分析对话 | /hint 获取建议 | /clear 清空 | /quit 退出"
                     self._render_consultant_panel()
                     continue
 
-                if user_input.lower().startswith("/ask"):
+                if cmd.startswith("/ask"):
                     # Ask consultant for analysis
                     question = user_input[4:].strip() if len(user_input) > 4 else None
                     self.last_consultant_message = "正在分析..."
@@ -749,7 +785,7 @@ class InvisibleWallGame:
                     self._render_consultant_panel()
                     continue
 
-                if user_input.lower() == "/hint":
+                if cmd == "/hint":
                     # Get a hint from consultant
                     self.last_consultant_message = "正在思考..."
                     self._render_consultant_panel()
@@ -766,6 +802,9 @@ class InvisibleWallGame:
 
                 # Send and get response
                 self.send_message(user_input)
+
+                # Clear consultant message after new conversation turn
+                self.last_consultant_message = ""
 
                 # Re-render
                 self._render_consultant_panel()
