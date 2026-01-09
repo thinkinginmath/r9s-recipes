@@ -210,6 +210,17 @@ class InvisibleWallGame:
         except Exception:
             return 80, 24
 
+    def _display_width(self, text: str) -> int:
+        """Calculate display width accounting for Chinese characters (2 cols each)."""
+        width = 0
+        for char in text:
+            # CJK characters take 2 columns
+            if '\u4e00' <= char <= '\u9fff' or '\u3000' <= char <= '\u303f':
+                width += 2
+            else:
+                width += 1
+        return width
+
     def _render_status_bar(self) -> str:
         """Render the top status bar."""
         width, _ = self._get_terminal_size()
@@ -232,16 +243,16 @@ class InvisibleWallGame:
             status_icon = f"{FG_GRAY}○{RESET}"
             status_text = "离线"
 
-        # Build status bar
+        # Build status bar - calculate visible width properly
         left = f"  {BOLD}{name}{RESET}  │  {status_icon} {status_text}"
         right = ""
         if temp_icon:
             right = f"{temp_icon} {temp_label}  "
 
-        # Calculate padding
-        left_len = len(name) + len(status_text) + 12  # Approximate visible length
-        right_len = len(temp_label) + 4 if temp_label else 0
-        padding = width - left_len - right_len
+        # Calculate visible width (excluding ANSI codes)
+        left_visible = 2 + self._display_width(name) + 5 + 2 + self._display_width(status_text)  # spaces + name + " │ " + icon + space + status
+        right_visible = self._display_width(temp_label) + 4 if temp_label else 0  # icon + space + label + spaces
+        padding = width - left_visible - right_visible
 
         bar = f"{BG_GRAY}{left}{' ' * max(0, padding)}{right}{RESET}"
         return bar
@@ -481,11 +492,14 @@ class InvisibleWallGame:
                 temperature=0.7,
                 max_tokens=150,
             )
-            if response.choices and response.choices[0].message:
-                return response.choices[0].message.content or "..."
+            if response.choices and len(response.choices) > 0:
+                choice = response.choices[0]
+                if choice.message and choice.message.content:
+                    return choice.message.content
+                return "(顾问没有回应)"
+            return "(顾问返回空响应)"
         except Exception as e:
-            return f"(顾问暂时无法回应: {e})"
-        return "..."
+            return f"(错误: {type(e).__name__}: {e})"
 
     def _format_history_for_consultant(self, history: List[Dict[str, str]]) -> str:
         """Format conversation history for the consultant."""
