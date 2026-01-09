@@ -11,7 +11,7 @@ if [ -z "$TEXT" ]; then
 fi
 
 # Configuration via environment variables
-MODEL="${R9S_TTS_MODEL:-tts-1}"
+MODEL="${R9S_TTS_MODEL:-gpt-4o-mini-tts}"
 VOICE="${R9S_TTS_VOICE:-alloy}"
 SPEED="${R9S_TTS_SPEED:-1.0}"
 FORMAT="${R9S_TTS_FORMAT:-mp3}"
