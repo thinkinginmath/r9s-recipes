@@ -17,7 +17,7 @@ SPEED="${R9S_TTS_SPEED:-1.0}"
 FORMAT="${R9S_TTS_FORMAT:-mp3}"
 
 # Create temp file for audio
-TMPFILE=$(mktemp /tmp/r9s-tts-XXXXXX.$FORMAT)
+TMPFILE=$(mktemp /tmp/r9s-tts-$$-XXXXXX.$FORMAT)
 trap "rm -f $TMPFILE" EXIT
 
 # Generate speech using r9s CLI
@@ -36,7 +36,7 @@ elif command -v paplay &>/dev/null; then
     if [ "$FORMAT" = "wav" ]; then
         paplay "$TMPFILE" 2>/dev/null
     elif command -v ffmpeg &>/dev/null; then
-        WAVFILE=$(mktemp /tmp/r9s-tts-XXXXXX.wav)
+        WAVFILE=$(mktemp /tmp/r9s-tts-$$-XXXXXX.wav)
         trap "rm -f $TMPFILE $WAVFILE" EXIT
         ffmpeg -i "$TMPFILE" -f wav "$WAVFILE" -y 2>/dev/null
         paplay "$WAVFILE" 2>/dev/null
@@ -46,7 +46,7 @@ elif command -v aplay &>/dev/null; then
     if [ "$FORMAT" = "wav" ]; then
         aplay "$TMPFILE" 2>/dev/null
     elif command -v ffmpeg &>/dev/null; then
-        WAVFILE=$(mktemp /tmp/r9s-tts-XXXXXX.wav)
+        WAVFILE=$(mktemp /tmp/r9s-tts-$$-XXXXXX.wav)
         trap "rm -f $TMPFILE $WAVFILE" EXIT
         ffmpeg -i "$TMPFILE" -f wav "$WAVFILE" -y 2>/dev/null
         aplay "$WAVFILE" 2>/dev/null
