@@ -1,0 +1,5 @@
+[agent]
+id = "agt_invisible_wall"
+name = "invisible-wall"
+description = "关系模拟器：一个真实存在、但永远无法被完全确认的「对方」- The Invisible Wall"
+current_version = "1.0.0"
