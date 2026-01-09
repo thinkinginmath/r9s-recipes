@@ -499,13 +499,17 @@ class InvisibleWallGame:
             if response.choices and len(response.choices) > 0:
                 choice = response.choices[0]
                 if choice.message:
+                    # Try content first, then reasoning_content (for reasoning models like GLM)
                     content = getattr(choice.message, 'content', None)
                     if content:
                         return content
-                    # Debug: show what we got
-                    return f"(消息对象: {choice.message})"
-                return f"(choice无message: {choice})"
-            return f"(无choices: {response})"
+                    # Fallback to reasoning_content for reasoning models
+                    reasoning = getattr(choice.message, 'reasoning_content', None)
+                    if reasoning:
+                        return reasoning
+                    return "(顾问没有回应)"
+                return "(无消息)"
+            return "(无响应)"
         except Exception as e:
             return f"(错误: {type(e).__name__}: {e})"
 
